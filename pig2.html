@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ระบบรายรับรายจ่าย - Franck&Sa</title>
+  <style>
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(120deg, #fceaff, #e0f7fa);
+      color: #5a4d7c;
+      margin: 2rem;
+    }
+    h1 {
+      text-align: center;
+      color: #805ad5;
+      text-shadow: 1px 1px 2px #fff;
+      font-weight: 700;
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+    }
+    form {
+      background: #fff7ffcc;
+      padding: 1.5rem;
+      border-radius: 1rem;
+      max-width: 400px;
+      margin: 0 auto 3rem;
+      box-shadow: 0 4px 15px rgba(128, 90, 213, 0.2);
+    }
+    label {
+      display: block;
+      margin-bottom: 0.75rem;
+      font-weight: 600;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: 0.75rem;
+      border: 1px solid #ddd;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      outline: none;
+      transition: box-shadow 0.3s ease;
+    }
+    input:focus, select:focus {
+      box-shadow: 0 0 5px 2px #a78bfa;
+      border-color: #a78bfa;
+    }
+    button {
+      background-color: #805ad5;
+      color: white;
+      border: none;
+      font-weight: 700;
+      padding: 0.8rem 1.5rem;
+      border-radius: 1rem;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: background-color 0.3s ease;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #6c46bb;
+    }
+    .message {
+      max-width: 400px;
+      margin: 1rem auto;
+      text-align: center;
+      font-weight: 600;
+    }
+    .summary {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: #fff7ffcc;
+      border-radius: 1rem;
+      padding: 1rem 2rem;
+      box-shadow: 0 4px 15px rgba(128, 90, 213, 0.2);
+    }
+    .summary h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #6b46c1;
+    }
+    .summary-values {
+      display: flex;
+      justify-content: space-around;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+    .income { color: #48bb78; }
+    .expense { color: #f56565; }
+    .balance { color: #3182ce; }
+  </style>
+</head>
+<body>
+  <h1>🌈 Franck&Sa รายรับรายจ่าย</h1>
+
+  <form id="expenseForm">
+    <label for="date">วันที่</label>
+    <input type="date" id="date" required />
+
+    <label for="description">หมวดหมู่</label>
+    <select id="description" required>
+      <option value="" disabled selected>-- เลือกหมวดหมู่ --</option>
+      <option value="เงินเดือน">เงินเดือน</option>
+      <option value="อาหาร">อาหาร</option>
+      <option value="เดินทาง">เดินทาง</option>
+      <option value="บันเทิง">บันเทิง</option>
+      <option value="อื่นๆ">อื่นๆ</option>
+    </select>
+
+    <label for="amount">จำนวนเงิน (กรอกเป็นบวกสำหรับรายรับ และลบสำหรับรายจ่าย)</label>
+    <input type="number" id="amount" step="0.01" required placeholder="เช่น 500 หรือ -300" />
+
+    <button type="submit">บันทึกข้อมูล</button>
+  </form>
+
+  <div class="message" id="message"></div>
+
+  <div class="summary" id="summary" style="display:none;">
+    <h2>สรุปยอด</h2>
+    <div class="summary-values">
+      <div class="income">รายรับ: <span id="incomeTotal">0</span> ฿</div>
+      <div class="expense">รายจ่าย: <span id="expenseTotal">0</span> ฿</div>
+      <div class="balance">ยอดคงเหลือ: <span id="balanceTotal">0</span> ฿</div>
+    </div>
+  </div>
+
+  <script>
+    const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyqkj91y-tiTLOwm9EVF757Hh7f7MX2kPoXBy6OQT8do45XRpFp14DUbpwpLUZ6lVpDkg/exec';
+    const form = document.getElementById('expenseForm');
+    const messageEl = document.getElementById('message');
+    const summaryEl = document.getElementById('summary');
+    const incomeTotalEl = document.getElementById('incomeTotal');
+    const expenseTotalEl = document.getElementById('expenseTotal');
+    const balanceTotalEl = document.getElementById('balanceTotal');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const date = document.getElementById('date').value;
+      const description = document.getElementById('description').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+
+      if (!date || !description || isNaN(amount)) {
+        messageEl.textContent = 'กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง';
+        return;
+      }
+
+      const payload = { date, description, amount };
+
+      try {
+        messageEl.textContent = 'กำลังส่งข้อมูล...';
+        const res = await fetch(SHEET_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const text = await res.text();
+
+        if (text === 'Success') {
+          messageEl.textContent = '✅ บันทึกข้อมูลสำเร็จ!';
+          form.reset();
+          loadSummary();
+        } else {
+          messageEl.textContent = '❌ เกิดข้อผิดพลาด: ' + text;
+        }
+      } catch (err) {
+        messageEl.textContent = '❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้';
+      }
+    });
+
+    async function loadSummary() {
+      try {
+        const res = await fetch(SHEET_URL);
+        const data = await res.json();
+
+        if (data.error) {
+          messageEl.textContent = '❌ เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + data.error;
+          return;
+        }
+
+        let income = 0;
+        let expense = 0;
+
+        data.forEach(item => {
+          if (item.amount > 0) income += item.amount;
+          else expense += Math.abs(item.amount);
+        });
+
+        incomeTotalEl.textContent = income.toFixed(2);
+        expenseTotalEl.textContent = expense.toFixed(2);
+        balanceTotalEl.textContent = (income - expense).toFixed(2);
+
+        summaryEl.style.display = 'block';
+      } catch (err) {
+        messageEl.textContent = '❌ ไม่สามารถโหลดข้อมูลสรุปได้';
+      }
+    }
+
+    // โหลดข้อมูลสรุปตอนเปิดหน้าเว็บ
+    loadSummary();
+  </script>
+</body>
+</html>
